@@ -46,14 +46,14 @@ handleDbmsOptions() {
             if [ "${DATABASE_DRIVER}" != "mysqli" ] && [ "${DATABASE_DRIVER}" != "pdo_mysql" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="10.4"
             if ! [[ ${DBMS_VERSION} =~ ^(10.4|10.5|10.6|10.7|10.8|10.9|10.10|10.11|11.0|11.1)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -62,14 +62,14 @@ handleDbmsOptions() {
             if [ "${DATABASE_DRIVER}" != "mysqli" ] && [ "${DATABASE_DRIVER}" != "pdo_mysql" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="8.0"
             if ! [[ ${DBMS_VERSION} =~ ^(8.0|8.1|8.2|8.3)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -77,14 +77,14 @@ handleDbmsOptions() {
             if [ -n "${DATABASE_DRIVER}" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="10"
             if ! [[ ${DBMS_VERSION} =~ ^(10|11|12|13|14|15|16)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -92,70 +92,69 @@ handleDbmsOptions() {
             if [ -n "${DATABASE_DRIVER}" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             if [ -n "${DBMS_VERSION}" ]; then
                 echo "Invalid combination -d ${DBMS} -i ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
         *)
             echo "Invalid option -d ${DBMS}" >&2
             echo >&2
-            echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+            echo "${HELP_MESSAGE}" >&2
             exit 1
             ;;
     esac
 }
 
+cleanFiles() {
+  local files=($"@")
+
+  # Ensure anything is handed here
+  if [ ${#files[@]} -eq 0 ]; then
+      return
+  fi
+
+  # @TODO: Really remove
+  ls -la "${files[@]}"
+}
+
 cleanBuildFiles() {
     echo -n "Clean builds ... "
-    rm -rf \
-        Build/JavaScript \
-        Build/node_modules
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_BUILD)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
 cleanCacheFiles() {
     echo -n "Clean caches ... "
-    rm -rf \
-        .cache \
-        Build/.cache \
-        Build/composer/.cache/ \
-        .php-cs-fixer.cache
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_CACHE)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
 cleanTestFiles() {
     # composer distribution test
     echo -n "Clean composer distribution test ... "
-    rm -rf \
-        Build/composer/composer.json \
-        Build/composer/composer.lock \
-        Build/composer/public/index.php \
-        Build/composer/public/typo3 \
-        Build/composer/public/typo3conf/ext \
-        Build/composer/var/ \
-        Build/composer/vendor/
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_COMPOSER)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 
     # test related
     echo -n "Clean test related files ... "
-    rm -rf \
-        Build/phpunit/FunctionalTests-Job-*.xml \
-        typo3/sysext/core/Tests/AcceptanceTests-Job-* \
-        typo3/sysext/core/Tests/Acceptance/Support/_generated \
-        typo3temp/var/tests/
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_TESTS)
+    cleanFiles "${GARBAGE[@]}"
     echo "done"
 }
 
 cleanRenderedDocumentationFiles() {
     echo -n "Clean rendered documentation files ... "
-    rm -rf \
-        ../../../typo3/sysext/*/Documentation-GENERATED-temp
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_DOCS)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
@@ -213,6 +212,7 @@ Options:
             - composerInstallMin: "composer update --prefer-lowest", with platform.php set to PHP version x.x.0.
             - composerTestDistribution: "composer update" in Build/composer to verify core dependencies
             - composerValidate: "composer validate"
+            - custom: Dispatch and execute additional runTests.sh sub tasks, see examples.
             - functional: PHP functional tests
             - functionalDeprecated: deprecated PHP functional tests
             - listExceptionCodes: list core exception codes in JSON format
@@ -303,10 +303,10 @@ Options:
         Example -e "-d memory_limit=-1 --filter filterByValueRecursiveCorrectlyFiltersArray" to enable verbose output AND filter tests
         named "canRetrieveValueWithGP"
 
-        DEPRECATED - pass arguments after the `--` separator directly. For example, instead of
-            Build/Scripts/runTests.sh -s unit -e "--filter filterByValueRecursiveCorrectlyFiltersArray"
+        DEPRECATED - pass arguments after the "--" separator directly. For example, instead of
+            $THIS_SCRIPT_NAME -s unit -e "--filter filterByValueRecursiveCorrectlyFiltersArray"
         use
-            Build/Scripts/runTests.sh -s unit -- --filter filterByValueRecursiveCorrectlyFiltersArray
+            $THIS_SCRIPT_NAME -s unit -- --filter filterByValueRecursiveCorrectlyFiltersArray
 
     -g
         Only with -s acceptance|acceptanceComposer|acceptanceInstall
@@ -342,46 +342,52 @@ Options:
 
 Examples:
     # Run all core unit tests using PHP 8.2
-    ./Build/Scripts/runTests.sh
-    ./Build/Scripts/runTests.sh -s unit
+    $THIS_SCRIPT_NAME
+    $THIS_SCRIPT_NAME -s unit
 
     # Run all core units tests and enable xdebug (have a PhpStorm listening on port 9003!)
-    ./Build/Scripts/runTests.sh -x
+    $THIS_SCRIPT_NAME -x
 
     # Run unit tests in phpunit with xdebug on PHP 8.3 and filter for test filterByValueRecursiveCorrectlyFiltersArray
-    ./Build/Scripts/runTests.sh -x -p 8.3 -- --filter filterByValueRecursiveCorrectlyFiltersArray
+    $THIS_SCRIPT_NAME -x -p 8.3 -- --filter filterByValueRecursiveCorrectlyFiltersArray
 
     # Run functional tests in phpunit with a filtered test method name in a specified file
     # example will currently execute two tests, both of which start with the search term
-    ./Build/Scripts/runTests.sh -s functional -- \
+    $THIS_SCRIPT_NAME -s functional -- \
       --filter datetimeInstanceCanBePersistedToDatabaseIfTypeIsExplicitlySpecified \
       typo3/sysext/core/Tests/Functional/Database/ConnectionTest.php
 
     # Run functional tests on postgres with xdebug, php 8.3 and execute a restricted set of tests
-    ./Build/Scripts/runTests.sh -x -p 8.3 -s functional -d postgres typo3/sysext/core/Tests/Functional/Authentication
+    $THIS_SCRIPT_NAME -x -p 8.3 -s functional -d postgres typo3/sysext/core/Tests/Functional/Authentication
 
     # Run functional tests on postgres 11
-    ./Build/Scripts/runTests.sh -s functional -d postgres -i 11
+    $THIS_SCRIPT_NAME -s functional -d postgres -i 11
 
     # Run restricted set of application acceptance tests
-    ./Build/Scripts/runTests.sh -s acceptance typo3/sysext/core/Tests/Acceptance/Application/Login/BackendLoginCest.php:loginButtonMouseOver
+    $THIS_SCRIPT_NAME -s acceptance typo3/sysext/core/Tests/Acceptance/Application/Login/BackendLoginCest.php:loginButtonMouseOver
 
     # Run installer tests of a new instance on sqlite
-    ./Build/Scripts/runTests.sh -s acceptanceInstall -d sqlite
+    $THIS_SCRIPT_NAME -s acceptanceInstall -d sqlite
 
     # Run composer require to require a dependency
-    ./Build/Scripts/runTests.sh -s composer -- require --dev typo3/testing-framework:dev-main
+    $THIS_SCRIPT_NAME -s composer -- require --dev typo3/testing-framework:dev-main
 
     # Some composer command examples
-    ./Build/Scripts/runTests.sh -s composer -- dumpautoload
-    ./Build/Scripts/runTests.sh -s composer -- info | grep "symfony"
+    $THIS_SCRIPT_NAME -s composer -- dumpautoload
+    $THIS_SCRIPT_NAME -s composer -- info | grep "symfony"
 
     # Some npm command examples
-    ./Build/Scripts/runTests.sh -s npm -- audit
-    ./Build/Scripts/runTests.sh -s npm -- ci
-    ./Build/Scripts/runTests.sh -s npm -- run build
-    ./Build/Scripts/runTests.sh -s npm -- run watch:build
-    ./Build/Scripts/runTests.sh -s npm -- install --save bootstrap@^5.3.2
+    $THIS_SCRIPT_NAME -s npm -- audit
+    $THIS_SCRIPT_NAME -s npm -- ci
+    $THIS_SCRIPT_NAME -s npm -- run build
+    $THIS_SCRIPT_NAME -s npm -- run watch:build
+    $THIS_SCRIPT_NAME -s npm -- install --save bootstrap@^5.3.2
+
+    # Custom sub-tasks dispatcher (see runTests.custom.sh)
+    # Executes "runTests.MyLinting.sh" (created by you!) and passes
+    # parameters ("-param1 -param2 --param3...") plus local variables along
+    $THIS_SCRIPT_NAME -s custom -- myLinting -param1 -param2 --param3
+
 EOF
 }
 
@@ -392,10 +398,71 @@ if ! type "docker" >/dev/null 2>&1 && ! type "podman" >/dev/null 2>&1; then
 fi
 
 # Go to the directory this script is located, so everything else is relative
-# to this dir, no matter from where this script is called, then go up two dirs.
+# to this dir, no matter from where this script is called. Later, go to the
+# project root.
 THIS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 cd "$THIS_SCRIPT_DIR" || exit 1
-cd ../../ || exit 1
+
+# Source "runTests.env" to load variables containing path definitions.
+# - All variables matching RUNTESTS_DIR_ will ensure a trailing slash.
+# - All variables defined use a "{$RUNTESTS_DIR_:=...}" definition to allow
+#   overriding these from the outside script call (`RUNTESTS_DIR_VENDOR="Build/something/vendor" .Build/Scripts/runTests.sh`)
+if [ -f "${THIS_SCRIPT_DIR}/runTests.env" ] ; then
+  source "${THIS_SCRIPT_DIR}/runTests.env"
+
+  # Ensure all "RUNTESTS_DIR_" variables end with trailing slash.
+  while IFS='=' read -r name value ; do
+    if [[ $name == RUNTESTS_DIR_* ]]; then
+      if [[ $value != */ ]]; then
+        export "$name=$value/"
+      fi
+    fi
+  done < <(env)
+else
+  # Default files when runTests.env is missing, using TYPO3 core configuration:
+  RUNTESTS_DIR_ROOT="${RUNTESTS_DIR_ROOT:=../../}"
+  RUNTESTS_DIR_BUILD="${RUNTESTS_DIR_BUILD:=Build/Scripts/}"
+  RUNTESTS_DIR_VENDOR="${RUNTESTS_DIR_VENDOR:=Build/composer/vendor/}"
+  RUNTESTS_DIR_BIN="${RUNTESTS_DIR_BIN:=bin/}"
+  RUNTESTS_DIR_TESTTEMP="${RUNTEST_DIR_TESTTEMP:=typo3temp/var/tests/}"
+  RUNTESTS_DIR_CACHE="${RUNTEST_DIR_TESTTEMP:=.cache/}"
+
+  RUNTESTS_DIRS_CACHE="$RUNTESTS_DIR_CACHE $RUNTESTS_DIR_TESTTEMP"
+  RUNTESTS_DIRS_PROJECT="${RUNTESTS_DIRS_PROJECT:=typo3/}"
+  RUNTESTS_DIRS_PROJECT_BUILD="${RUNTESTS_DIRS_PROJECT_BUILD:=typo3/sysext}"
+
+  RUNTESTS_CLEANUP_BUILD="${RUNTEST_CLEANUP_BUILD:=\
+                                    Build/JavaScript
+                                    Build/node_modules}"
+  RUNTESTS_CLEANUP_CACHE="${RUNTESTS_CLEANUP_CACHE:=\
+                                    .cache
+                                    Build/.cache
+                                    Build/composer/.cache/
+                                    .php-cs-fixer.cache}"
+  RUNTESTS_CLEANUP_COMPOSER="${RUNTESTS_CLEANUP_COMPOSER:=\
+                                    Build/composer/composer.json \
+                                    Build/composer/composer.lock \
+                                    Build/composer/public/index.php \
+                                    Build/composer/public/typo3 \
+                                    Build/composer/public/typo3conf/ext \
+                                    Build/composer/var/ \
+                                    Build/composer/vendor/}"
+  RUNTESTS_CLEANUP_TESTS="${RUNTESTS_CLEANUP_TESTS:=\
+                                    Build/phpunit/FunctionalTests-Job-*.xml \
+                                    typo3/sysext/core/Tests/AcceptanceTests-Job-* \
+                                    typo3/sysext/core/Tests/Acceptance/Support/_generated \
+                                    typo3temp/var/tests/}"
+  RUNTESTS_CLEANUP_DOCS="${RUNTESTS_CLEANUP_DOCS:=typo3/sysext/*/Documentation-GENERATED-temp}"
+
+  RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL="${RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL:=phpstan.local.neon}"
+  RUNTESTS_PHPSTAN_CONFIG_FILE_CI="${RUNTESTS_PHPSTAN_CONFIG_FILE_CI:=phpstan.ci.neon}"
+  RUNTESTS_CODECEPTION_CONFIG_FILE="${RUNTESTS_CODECEPTION_CONFIG_FILE:=typo3/sysext/core/Tests/codeception.yml}"
+
+  RUNTESTS_COMMAND_BUILD_CSS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt css"
+  RUNTESTS_COMMAND_BUILD_JS="cd Build/; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
+fi
+
+cd "$RUNTESTS_DIR_ROOT" || exit 1
 CORE_ROOT="${PWD}"
 
 # Default variables
@@ -415,7 +482,7 @@ CHUNKS=0
 THISCHUNK=0
 CONTAINER_BIN=""
 COMPOSER_ROOT_VERSION="13.2.x-dev"
-PHPSTAN_CONFIG_FILE="phpstan.local.neon"
+PHPSTAN_CONFIG_FILE="$RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL"
 CONTAINER_INTERACTIVE="-it --init"
 HOST_UID=$(id -u)
 HOST_PID=$(id -g)
@@ -424,6 +491,8 @@ SUFFIX=$(echo $RANDOM)
 NETWORK="typo3-core-${SUFFIX}"
 CI_PARAMS="${CI_PARAMS:-}"
 CONTAINER_HOST="host.docker.internal"
+THIS_SCRIPT_NAME="${RUNTESTS_DIR_BUILD}runTests.sh"
+HELP_MESSAGE="Use \"${THIS_SCRIPT_NAME} -h\" to display help and valid options"
 
 # Option parsing updates above default vars
 # Reset in case getopts has been used previously in the shell
@@ -511,7 +580,7 @@ if [ ${#INVALID_OPTIONS[@]} -ne 0 ]; then
         echo "-"${I} >&2
     done
     echo >&2
-    echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+    echo "$HELP_MESSAGE" >&2
     exit 1
 fi
 
@@ -519,7 +588,7 @@ handleDbmsOptions
 
 # ENV var "CI" is set by gitlab-ci. Use it to force some CI details.
 if [ "${CI}" == "true" ]; then
-    PHPSTAN_CONFIG_FILE="phpstan.ci.neon"
+    PHPSTAN_CONFIG_FILE="$RUNTESTS_PHPSTAN_CONFIG_FILE_CI"
     CONTAINER_INTERACTIVE=""
 fi
 
@@ -565,8 +634,7 @@ fi
 shift $((OPTIND - 1))
 
 # Create .cache dir: composer and various npm jobs need this.
-mkdir -p .cache
-mkdir -p typo3temp/var/tests
+mkdir -p $RUNTESTS_DIRS_CACHE
 
 ${CONTAINER_BIN} network create ${NETWORK} >/dev/null
 
@@ -597,18 +665,18 @@ case ${TEST_SUITE} in
             CODECEPION_ENV="--env ci,classic,headless,${ACCEPTANCE_TOPIC}"
         fi
         if [ "${CHUNKS}" -gt 0 ]; then
-            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/splitAcceptanceTests.php -v ${CHUNKS}
-            COMMAND=(bin/codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
+            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILD}splitAcceptanceTests.php -v ${CHUNKS}
+            COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
         else
-            COMMAND=(bin/codecept run Application -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
+            COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
         fi
         SELENIUM_GRID=""
         if [ "${ACCEPTANCE_HEADLESS}" -eq 0 ]; then
             SELENIUM_GRID="-p 7900:7900 -e SE_VNC_NO_PASSWORD=1 -e VNC_NO_PASSWORD=1"
         fi
-        rm -rf "${CORE_ROOT}/typo3temp/var/tests/acceptance" "${CORE_ROOT}/typo3temp/var/tests/AcceptanceReports"
-        mkdir -p "${CORE_ROOT}/typo3temp/var/tests/acceptance"
-        APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/typo3temp/var/tests/acceptance -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
+        rm -rf "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance" "${CORE_ROOT}/AcceptanceReports"
+        mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance"
+        APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} -d ${SELENIUM_GRID} --name ac-chrome-${SUFFIX} --network ${NETWORK} --network-alias chrome --tmpfs /dev/shm:rw,nosuid,nodev,noexec ${IMAGE_SELENIUM} >/dev/null
         if [ ${CONTAINER_BIN} = "docker" ]; then
             ${CONTAINER_BIN} run --rm -d --name ac-phpfpm-${SUFFIX} --network ${NETWORK} --network-alias phpfpm --add-host "${CONTAINER_HOST}:host-gateway" ${USERSET} -e PHPFPM_USER=${HOST_UID} -e PHPFPM_GROUP=${HOST_PID} -v ${CORE_ROOT}:${CORE_ROOT} ${IMAGE_PHP} php-fpm ${PHP_FPM_OPTIONS} >/dev/null
@@ -650,8 +718,8 @@ case ${TEST_SUITE} in
                 SUITE_EXIT_CODE=$?
                 ;;
             sqlite)
-                rm -rf "${CORE_ROOT}/typo3temp/var/tests/acceptance-sqlite-dbs/"
-                mkdir -p "${CORE_ROOT}/typo3temp/var/tests/acceptance-sqlite-dbs/"
+                rm -rf "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-sqlite-dbs/"
+                mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-sqlite-dbs/"
                 CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-sqlite ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} "${COMMAND[@]}"
                 SUITE_EXIT_CODE=$?
@@ -659,7 +727,7 @@ case ${TEST_SUITE} in
         esac
         ;;
     acceptanceComposer)
-        rm -rf "${CORE_ROOT}/typo3temp/var/tests/acceptance-composer" "${CORE_ROOT}/typo3temp/var/tests/AcceptanceReports"
+        rm -rf "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-composer" "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}AcceptanceReports"
 
         PREPAREPARAMS=""
         TESTPARAMS=""
@@ -688,7 +756,7 @@ case ${TEST_SUITE} in
                 ;;
         esac
 
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name acceptance-prepare ${XDEBUG_MODE} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${PREPAREPARAMS} ${IMAGE_PHP} "${CORE_ROOT}/Build/Scripts/setupAcceptanceComposer.sh" "typo3temp/var/tests/acceptance-composer" sqlite "" "${ACCEPTANCE_TOPIC}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name acceptance-prepare ${XDEBUG_MODE} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${PREPAREPARAMS} ${IMAGE_PHP} "${CORE_ROOT}/${RUNTESTS_DIR_BUILD}setupAcceptanceComposer.sh" "${RUNTESTS_DIR_TESTTEMP}acceptance-composer" sqlite "" "${ACCEPTANCE_TOPIC}"
         SUITE_EXIT_CODE=$?
         if [[ ${SUITE_EXIT_CODE} -eq 0 ]]; then
             CODECEPION_ENV="--env ci,composer,${ACCEPTANCE_TOPIC}"
@@ -696,16 +764,16 @@ case ${TEST_SUITE} in
                 CODECEPION_ENV="--env ci,composer,headless,${ACCEPTANCE_TOPIC}"
             fi
             if [ "${CHUNKS}" -gt 0 ]; then
-                ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/splitAcceptanceTests.php -v ${CHUNKS}
-                COMMAND=(bin/codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
+                ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILD}splitAcceptanceTests.php -v ${CHUNKS}
+                COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
             else
-                COMMAND=(bin/codecept run Application -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
+                COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
             fi
             SELENIUM_GRID=""
             if [ "${ACCEPTANCE_HEADLESS}" -eq 0 ]; then
                 SELENIUM_GRID="-p 7900:7900 -e SE_VNC_NO_PASSWORD=1 -e VNC_NO_PASSWORD=1"
             fi
-            APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/typo3temp/var/tests/acceptance-composer/public -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
+            APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-composer/public -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
             ${CONTAINER_BIN} run --rm ${CI_PARAMS} -d ${SELENIUM_GRID} --name ac-chrome-${SUFFIX} --network ${NETWORK} --network-alias chrome --tmpfs /dev/shm:rw,nosuid,nodev,noexec ${IMAGE_SELENIUM} >/dev/null
             if [ ${CONTAINER_BIN} = "docker" ]; then
                 ${CONTAINER_BIN} run --rm -d --name ac-phpfpm-${SUFFIX} --network ${NETWORK} --network-alias phpfpm --add-host "${CONTAINER_HOST}:host-gateway" ${USERSET} -e PHPFPM_USER=${HOST_UID} -e PHPFPM_GROUP=${HOST_PID} -v ${CORE_ROOT}:${CORE_ROOT} ${IMAGE_PHP} php-fpm ${PHP_FPM_OPTIONS} >/dev/null
@@ -734,9 +802,9 @@ case ${TEST_SUITE} in
         if [ "${ACCEPTANCE_HEADLESS}" -eq 0 ]; then
             SELENIUM_GRID="-p 7900:7900 -e SE_VNC_NO_PASSWORD=1 -e VNC_NO_PASSWORD=1"
         fi
-        rm -rf "${CORE_ROOT}/typo3temp/var/tests/acceptance" "${CORE_ROOT}/typo3temp/var/tests/AcceptanceReports"
-        mkdir -p "${CORE_ROOT}/typo3temp/var/tests/acceptance"
-        APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/typo3temp/var/tests/acceptance -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
+        rm -rf "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance" "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}AcceptanceReports"
+        mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance"
+        APACHE_OPTIONS="-e APACHE_RUN_USER=#${HOST_UID} -e APACHE_RUN_SERVERNAME=web -e APACHE_RUN_GROUP=#${HOST_PID} -e APACHE_RUN_DOCROOT=${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance -e PHPFPM_HOST=phpfpm -e PHPFPM_PORT=9000"
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} -d ${SELENIUM_GRID} --name ac-install-chrome-${SUFFIX} --network ${NETWORK} --network-alias chrome --tmpfs /dev/shm:rw,nosuid,nodev,noexec ${IMAGE_SELENIUM} >/dev/null
         if [ ${CONTAINER_BIN} = "docker" ]; then
             ${CONTAINER_BIN} run --rm -d --name ac-install-phpfpm-${SUFFIX} --network ${NETWORK} --network-alias phpfpm --add-host "${CONTAINER_HOST}:host-gateway" ${USERSET} -e PHPFPM_USER=${HOST_UID} -e PHPFPM_GROUP=${HOST_PID} -v ${CORE_ROOT}:${CORE_ROOT} ${IMAGE_PHP} php-fpm ${PHP_FPM_OPTIONS} >/dev/null
@@ -764,7 +832,7 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name mariadb-ac-install-${SUFFIX} --network ${NETWORK} -d -e MYSQL_ROOT_PASSWORD=funcp --tmpfs /var/lib/mysql/:rw,noexec,nosuid ${IMAGE_MARIADB} >/dev/null
                 waitFor mariadb-ac-install-${SUFFIX} 3306
                 CONTAINERPARAMS="-e typo3InstallMysqlDatabaseName=func_test -e typo3InstallMysqlDatabaseUsername=root -e typo3InstallMysqlDatabasePassword=funcp -e typo3InstallMysqlDatabaseHost=mariadb-ac-install-${SUFFIX}"
-                COMMAND="bin/codecept run Install -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-mariadb ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -776,7 +844,7 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name mysql-ac-install-${SUFFIX} --network ${NETWORK} -d -e MYSQL_ROOT_PASSWORD=funcp --tmpfs /var/lib/mysql/:rw,noexec,nosuid ${IMAGE_MYSQL} >/dev/null
                 waitFor mysql-ac-install-${SUFFIX} 3306
                 CONTAINERPARAMS="-e typo3InstallMysqlDatabaseName=func_test -e typo3InstallMysqlDatabaseUsername=root -e typo3InstallMysqlDatabasePassword=funcp -e typo3InstallMysqlDatabaseHost=mysql-ac-install-${SUFFIX}"
-                COMMAND="bin/codecept run Install -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-mysql ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -788,31 +856,31 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name postgres-ac-install-${SUFFIX} --network ${NETWORK} -d -e POSTGRES_PASSWORD=funcp -e POSTGRES_USER=funcu --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid ${IMAGE_POSTGRES} >/dev/null
                 waitFor postgres-ac-install-${SUFFIX} 5432
                 CONTAINERPARAMS="-e typo3InstallPostgresqlDatabasePort=5432 -e typo3InstallPostgresqlDatabaseName=${USER} -e typo3InstallPostgresqlDatabaseHost=postgres-ac-install-${SUFFIX} -e typo3InstallPostgresqlDatabaseUsername=funcu -e typo3InstallPostgresqlDatabasePassword=funcp"
-                COMMAND="bin/codecept run Install -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-postgres ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
             sqlite)
-                rm -rf "${CORE_ROOT}/typo3temp/var/tests/acceptance-sqlite-dbs/"
-                mkdir -p "${CORE_ROOT}/typo3temp/var/tests/acceptance-sqlite-dbs/"
+                rm -rf "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-sqlite-dbs/"
+                mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}acceptance-sqlite-dbs/"
                 CODECEPION_ENV="--env ci,sqlite"
                 if [ "${ACCEPTANCE_HEADLESS}" -eq 1 ]; then
                     CODECEPION_ENV="--env ci,sqlite,headless"
                 fi
                 CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite"
-                COMMAND="bin/codecept run Install -d -c typo3/sysext/core/Tests/codeception.yml ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-sqlite ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
         esac
         ;;
     buildCss)
-        COMMAND="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt css"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_CSS}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-css-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     buildJavascript)
-        COMMAND="cd Build/; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_JS}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-js-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
@@ -821,7 +889,7 @@ case ${TEST_SUITE} in
         if [ -n "${CGLCHECK_DRY_RUN}" ]; then
             CGLCHECK_DRY_RUN="--dry-run --diff"
         fi
-        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/config.php typo3/"
+        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/config.php ${RUNTESTS_DIRS_PROJECT}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-${SUFFIX} ${IMAGE_PHP} ${COMMAND}
         SUITE_EXIT_CODE=$?
         ;;
@@ -834,7 +902,7 @@ case ${TEST_SUITE} in
         if [ -n "${CGLCHECK_DRY_RUN}" ]; then
             CGLCHECK_DRY_RUN="--dry-run --diff"
         fi
-        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/header-comment.php typo3/"
+        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/header-comment.php ${RUNTESTS_DIRS_PROJECT}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-header-${SUFFIX} ${IMAGE_PHP} ${COMMAND}
         SUITE_EXIT_CODE=$?
         ;;
@@ -872,7 +940,7 @@ case ${TEST_SUITE} in
         SUITE_EXIT_CODE=$?
         ;;
     checkGruntClean)
-        COMMAND="find 'typo3/sysext' -name '*.js' -not -path '*/Fixtures/*' -exec rm '{}' + && cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt build; cd ..; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
+        COMMAND="find '${RUNTESTS_DIRS_PROJECT_GRUNT}' -name '*.js' -not -path '*/Fixtures/*' -exec rm '{}' + && cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt build; cd ..; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-grunt-clean-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
@@ -972,9 +1040,9 @@ case ${TEST_SUITE} in
                 SUITE_EXIT_CODE=$?
                 ;;
             sqlite)
-                # create sqlite tmpfs mount typo3temp/var/tests/functional-sqlite-dbs/ to avoid permission issues
-                mkdir -p "${CORE_ROOT}/typo3temp/var/tests/functional-sqlite-dbs/"
-                CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite --tmpfs ${CORE_ROOT}/typo3temp/var/tests/functional-sqlite-dbs/:rw,noexec,nosuid"
+                # create sqlite tmpfs mount (temp)functional-sqlite-dbs/ to avoid permission issues
+                mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}functional-sqlite-dbs/"
+                CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite --tmpfs ${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}functional-sqlite-dbs/:rw,noexec,nosuid"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name functional-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} "${COMMAND[@]}"
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -1012,9 +1080,9 @@ case ${TEST_SUITE} in
                 SUITE_EXIT_CODE=$?
                 ;;
             sqlite)
-                # create sqlite tmpfs mount typo3temp/var/tests/functional-sqlite-dbs/ to avoid permission issues
-                mkdir -p "${CORE_ROOT}/typo3temp/var/tests/functional-sqlite-dbs/"
-                CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite --tmpfs ${CORE_ROOT}/typo3temp/var/tests/functional-sqlite-dbs/:rw,noexec,nosuid"
+                # create sqlite tmpfs mount (temp)functional-sqlite-dbs/ to avoid permission issues
+                mkdir -p "${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}functional-sqlite-dbs/"
+                CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite --tmpfs ${CORE_ROOT}/${RUNTESTS_DIR_TESTTEMP}functional-sqlite-dbs/:rw,noexec,nosuid"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name functional-deprecated-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} "${COMMAND[@]}"
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -1030,7 +1098,7 @@ case ${TEST_SUITE} in
         SUITE_EXIT_CODE=$?
         ;;
     lintPhp)
-        COMMAND="php -v | grep '^PHP'; find typo3/ -name \\*.php -print0 | xargs -0 -n1 -P"'$(nproc 2>/dev/null || echo 4)'" php -dxdebug.mode=off -l >/dev/null"
+        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} -name \\*.php -print0 | xargs -0 -n1 -P"'$(nproc 2>/dev/null || echo 4)'" php -dxdebug.mode=off -l >/dev/null"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
@@ -1040,7 +1108,7 @@ case ${TEST_SUITE} in
         SUITE_EXIT_CODE=$?
         ;;
     lintServicesYaml)
-        COMMAND="php -v | grep '^PHP'; find typo3/ -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --parse-tags"
+        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --parse-tags"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
@@ -1051,7 +1119,7 @@ case ${TEST_SUITE} in
         ;;
     lintYaml)
         EXCLUDE_INVALID_FIXTURE_YAML_FILES="--exclude typo3/sysext/form/Tests/Unit/Mvc/Configuration/Fixtures/Invalid.yaml"
-        COMMAND="php -v | grep '^PHP'; find typo3/ \\( -name '*.yaml' -o -name '*.yml' \\) ! -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --no-parse-tags ${EXCLUDE_INVALID_FIXTURE_YAML_FILES}"
+        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} \\( -name '*.yaml' -o -name '*.yml' \\) ! -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --no-parse-tags ${EXCLUDE_INVALID_FIXTURE_YAML_FILES}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
@@ -1126,8 +1194,8 @@ if [[ ${TEST_SUITE} =~ ^(functional|functionalDeprecated|acceptance|acceptanceCo
 fi
 if [[ -n ${EXTRA_TEST_OPTIONS} ]]; then
     echo " Note: Using -e is deprecated. Simply add the options at the end of the command."
-    echo " Instead of: Build/Scripts/runTests.sh -s ${TEST_SUITE} -e '${EXTRA_TEST_OPTIONS}' $@"
-    echo " use:        Build/Scripts/runTests.sh -s ${TEST_SUITE} -- ${EXTRA_TEST_OPTIONS} $@"
+    echo " Instead of: ${THIS_SCRIPT_NAME} -s ${TEST_SUITE} -e '${EXTRA_TEST_OPTIONS}' $@"
+    echo " use:        ${THIS_SCRIPT_NAME} -s ${TEST_SUITE} -- ${EXTRA_TEST_OPTIONS} $@"
 fi
 if [[ ${SUITE_EXIT_CODE} -eq 0 ]]; then
     echo "SUCCESS" >&2
