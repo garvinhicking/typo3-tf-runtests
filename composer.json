@@ -1,0 +1,19 @@
+{
+	"name": "garvinhicking/typo3-tf-runtests",
+	"description": "A testing runTests.sh example",
+	"license": "GPL-2.0-or-later",
+	"config": {
+		"bin-dir": ".Build/bin",
+        "vendor-dir": ".Build/vendor",
+		"allow-plugins": {
+			"typo3/class-alias-loader": true,
+			"typo3/cms-composer-installers": true
+		}
+	},
+	"require": {
+      "typo3/minimal": "^13.0"
+    },
+	"require-dev": {
+      "typo3/testing-framework": "^8.0.9"
+	}
+}
