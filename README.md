@@ -75,8 +75,6 @@ be modified to:
 # Needed files
 
 * typo3/typo3:Build/Scripts/runTests.sh
-* typo3/typo3:Build/Scripts/splitAcceptanceTests.php (TODO)
-* typo3/typo3:Build/Scripts/setupAcceptanceComposer.sh (TODO)
 * some default phpstan etc. configs
 
 # TODO: FUTURE "HOW TO"

@@ -20,7 +20,7 @@ waitFor() {
             COUNT=\$((COUNT + 1));
         done;
     "
-    ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name wait-for-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_ALPINE} /bin/sh -c "${TESTCOMMAND}"
+    ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name wait-for-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_ALPINE} ${CONTAINER_SHELL} -c "${TESTCOMMAND}"
     if [[ $? -gt 0 ]]; then
         kill -SIGINT -$$
     fi
@@ -181,26 +181,26 @@ Usage: $0 [options] [file]
 Options:
     -s <...>
         Specifies the test suite to run
-            - acceptance: main application acceptance tests
-            - acceptanceComposer: main application acceptance tests
-            - acceptanceInstall: installation acceptance tests, only with -d mariadb|postgres|sqlite
+            - acceptance: main application acceptance tests [CORE-ONLY]
+            - acceptanceComposer: main application acceptance tests [CORE-ONLY]
+            - acceptanceInstall: installation acceptance tests, only with -d mariadb|postgres|sqlite [CORE-ONLY]
             - buildCss: execute scss to css builder
             - buildJavascript: execute typescript to javascript builder
             - cgl: test and fix all core php files
             - cglGit: test and fix latest committed patch for CGL compliance
             - cglHeader: test and fix file header for all core php files
             - cglHeaderGit: test and fix latest committed patch for CGL file header compliance
-            - checkBom: check UTF-8 files do not contain BOM
-            - checkComposer: check composer.json files for version integrity
-            - checkExceptionCodes: test core for duplicate exception codes
-            - checkExtensionScannerRst: test all .rst files referenced by extension scanner exist
+            - checkBom: check UTF-8 files do not contain BOM [CORE-ONLY]
+            - checkComposer: check composer.json files for version integrity [CORE-ONLY]
+            - checkExceptionCodes: test core for duplicate exception codes [CORE-ONLY]
+            - checkExtensionScannerRst: test all .rst files referenced by extension scanner exist [CORE-ONLY]
             - checkFilePathLength: test core file paths do not exceed maximum length
             - checkGitSubmodule: test core git has no sub modules defined
             - checkGruntClean: Verify "grunt build" is clean. Warning: Executes git commands! Usually used in CI only.
-            - checkIntegrityPhp: check php code for with registered integrity rules
-            - checkIsoDatabase: Verify "updateIsoDatabase.php" does not change anything.
+            - checkIntegrityPhp: check php code for with registered integrity rules [CORE-ONLY]
+            - checkIsoDatabase: Verify "updateIsoDatabase.php" does not change anything. [CORE-ONLY]
             - checkPermissions: test some core files for correct executable bits
-            - checkRst: test .rst files for integrity
+            - checkRst: test .rst files for integrity [CORE-ONLY]
             - clean: clean up build, cache and testing related files and folders
             - cleanBuild: clean up build related files and folders
             - cleanCache: clean up cache related files and folders
@@ -405,7 +405,7 @@ cd "$THIS_SCRIPT_DIR" || exit 1
 
 # Source "runTests.env" to load variables containing path definitions.
 # - All variables matching RUNTESTS_DIR_ will ensure a trailing slash.
-# - All variables defined use a "{$RUNTESTS_DIR_:=...}" definition to allow
+# - All variables defined use a "${RUNTESTS_DIR_:=...}" definition to allow
 #   overriding these from the outside script call (`RUNTESTS_DIR_VENDOR="Build/something/vendor" .Build/Scripts/runTests.sh`)
 if [ -f "${THIS_SCRIPT_DIR}/runTests.env" ] ; then
   source "${THIS_SCRIPT_DIR}/runTests.env"
@@ -421,17 +421,18 @@ if [ -f "${THIS_SCRIPT_DIR}/runTests.env" ] ; then
 else
   # Default files when runTests.env is missing, using TYPO3 core configuration:
   RUNTESTS_DIR_ROOT="${RUNTESTS_DIR_ROOT:=../../}"
-  RUNTESTS_DIR_BUILD="${RUNTESTS_DIR_BUILD:=Build/Scripts/}"
+  RUNTESTS_DIR_BUILDER="${RUNTESTS_DIR_BUILDER:=Build/Scripts/}"
+  RUNTESTS_DIR_BUILD="${RUNTESTS_DIR_BUILD:=Build}"
   RUNTESTS_DIR_VENDOR="${RUNTESTS_DIR_VENDOR:=Build/composer/vendor/}"
   RUNTESTS_DIR_BIN="${RUNTESTS_DIR_BIN:=bin/}"
-  RUNTESTS_DIR_TESTTEMP="${RUNTEST_DIR_TESTTEMP:=typo3temp/var/tests/}"
-  RUNTESTS_DIR_CACHE="${RUNTEST_DIR_TESTTEMP:=.cache/}"
+  RUNTESTS_DIR_TESTTEMP="${RUNTESTS_DIR_TESTTEMP:=typo3temp/var/tests/}"
+  RUNTESTS_DIR_CACHE="${RUNTESTS_DIR_TESTTEMP:=.cache/}"
 
   RUNTESTS_DIRS_CACHE="$RUNTESTS_DIR_CACHE $RUNTESTS_DIR_TESTTEMP"
   RUNTESTS_DIRS_PROJECT="${RUNTESTS_DIRS_PROJECT:=typo3/}"
   RUNTESTS_DIRS_PROJECT_BUILD="${RUNTESTS_DIRS_PROJECT_BUILD:=typo3/sysext}"
 
-  RUNTESTS_CLEANUP_BUILD="${RUNTEST_CLEANUP_BUILD:=\
+  RUNTESTS_CLEANUP_BUILD="${RUNTESTS_CLEANUP_BUILD:=\
                                     Build/JavaScript
                                     Build/node_modules}"
   RUNTESTS_CLEANUP_CACHE="${RUNTESTS_CLEANUP_CACHE:=\
@@ -454,12 +455,26 @@ else
                                     typo3temp/var/tests/}"
   RUNTESTS_CLEANUP_DOCS="${RUNTESTS_CLEANUP_DOCS:=typo3/sysext/*/Documentation-GENERATED-temp}"
 
-  RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL="${RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL:=phpstan.local.neon}"
-  RUNTESTS_PHPSTAN_CONFIG_FILE_CI="${RUNTESTS_PHPSTAN_CONFIG_FILE_CI:=phpstan.ci.neon}"
+  RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL="${RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL:=Build/phpstan/phpstan.local.neon}"
+  RUNTESTS_PHPSTAN_CONFIG_FILE_CI="${RUNTESTS_PHPSTAN_CONFIG_FILE_CI:=Build/phpstan/phpstan.ci.neon}"
+  RUNTESTS_PHPSTAN_BASELINE_FILE="${RUNTESTS_PHPSTAN_BASELINE_FILE:=Build/phpstan/phpstan-baseline.neon}"
+  RUNTESTS_PHPUNIT_FILE_UNITTEST="${RUNTESTS_PHPUNIT_FILE_UNITTEST:=Build/phpunit/UnitTests.xml}"
+  RUNTESTS_PHPUNIT_FILE_UNITTEST_DEPRECATED="${RUNTESTS_PHPUNIT_FILE_UNITTEST_DEPRECATED:=Build/phpunit/UnitTestsDeprecated.xml}"
+  RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST="${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST:=Build/phpunit/FunctionalTests.xml}"
+  RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED="${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED:=Build/phpunit/FunctionalTestsDeprecated.xml}"
+  RUNTESTS_DIR_PHPUNIT_FUNCTIONAL="${RUNTESTS_DIR_PHPUNIT_FUNCTIONAL:=Build/phpunit/}"
   RUNTESTS_CODECEPTION_CONFIG_FILE="${RUNTESTS_CODECEPTION_CONFIG_FILE:=typo3/sysext/core/Tests/codeception.yml}"
+  RUNTESTS_PHPCSFIXER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_CONFIG_FILE:Build/php-cs-fixer/config.php}"
+  RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE:Build/php-cs-fixer/header-comment.php}"
+  RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE="${RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE:Build/Scripts/phpIntegrityChecker.php}"
 
   RUNTESTS_COMMAND_BUILD_CSS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt css"
-  RUNTESTS_COMMAND_BUILD_JS="cd Build/; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
+  RUNTESTS_COMMAND_BUILD_JS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
+  RUNTESTS_COMMAND_BUILD_CLEAN="find '${RUNTESTS_DIRS_PROJECT_BUILD}' -name '*.js' -not -path '*/Fixtures/*' -exec rm '{}' + && cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt build; cd ..; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
+  RUNTESTS_COMMAND_BUILD_LINT="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt exec:lintspaces"
+  RUNTESTS_COMMAND_BUILD_LINT_STYLE="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt stylelint"
+  RUNTESTS_COMMAND_BUILD_LINT_TS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt eslint"
+  RUNTESTS_COMMAND_UNIT_JS="cd Build; npm ci || exit 1; CHROME_SANDBOX=false BROWSERS=chrome npm run test"
 fi
 
 cd "$RUNTESTS_DIR_ROOT" || exit 1
@@ -482,6 +497,7 @@ CHUNKS=0
 THISCHUNK=0
 CONTAINER_BIN=""
 COMPOSER_ROOT_VERSION="13.2.x-dev"
+CONTAINER_SHELL="/bin/sh"
 PHPSTAN_CONFIG_FILE="$RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL"
 CONTAINER_INTERACTIVE="-it --init"
 HOST_UID=$(id -u)
@@ -491,7 +507,7 @@ SUFFIX=$(echo $RANDOM)
 NETWORK="typo3-core-${SUFFIX}"
 CI_PARAMS="${CI_PARAMS:-}"
 CONTAINER_HOST="host.docker.internal"
-THIS_SCRIPT_NAME="${RUNTESTS_DIR_BUILD}runTests.sh"
+THIS_SCRIPT_NAME="${RUNTESTS_DIR_BUILDER}runTests.sh"
 HELP_MESSAGE="Use \"${THIS_SCRIPT_NAME} -h\" to display help and valid options"
 
 # Option parsing updates above default vars
@@ -665,7 +681,7 @@ case ${TEST_SUITE} in
             CODECEPION_ENV="--env ci,classic,headless,${ACCEPTANCE_TOPIC}"
         fi
         if [ "${CHUNKS}" -gt 0 ]; then
-            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILD}splitAcceptanceTests.php -v ${CHUNKS}
+            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}splitAcceptanceTests.php -v ${CHUNKS}
             COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
         else
             COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
@@ -756,7 +772,7 @@ case ${TEST_SUITE} in
                 ;;
         esac
 
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name acceptance-prepare ${XDEBUG_MODE} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${PREPAREPARAMS} ${IMAGE_PHP} "${CORE_ROOT}/${RUNTESTS_DIR_BUILD}setupAcceptanceComposer.sh" "${RUNTESTS_DIR_TESTTEMP}acceptance-composer" sqlite "" "${ACCEPTANCE_TOPIC}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name acceptance-prepare ${XDEBUG_MODE} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${PREPAREPARAMS} ${IMAGE_PHP} "${CORE_ROOT}/${RUNTESTS_DIR_BUILDER}setupAcceptanceComposer.sh" "${RUNTESTS_DIR_TESTTEMP}acceptance-composer" sqlite "" "${ACCEPTANCE_TOPIC}"
         SUITE_EXIT_CODE=$?
         if [[ ${SUITE_EXIT_CODE} -eq 0 ]]; then
             CODECEPION_ENV="--env ci,composer,${ACCEPTANCE_TOPIC}"
@@ -764,7 +780,7 @@ case ${TEST_SUITE} in
                 CODECEPION_ENV="--env ci,composer,headless,${ACCEPTANCE_TOPIC}"
             fi
             if [ "${CHUNKS}" -gt 0 ]; then
-                ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILD}splitAcceptanceTests.php -v ${CHUNKS}
+                ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}splitAcceptanceTests.php -v ${CHUNKS}
                 COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -g AcceptanceTests-Job-${THISCHUNK} -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
             else
                 COMMAND=(${RUNTESTS_DIR_BIN}codecept run Application -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} "$@" --html reports.html)
@@ -832,7 +848,7 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name mariadb-ac-install-${SUFFIX} --network ${NETWORK} -d -e MYSQL_ROOT_PASSWORD=funcp --tmpfs /var/lib/mysql/:rw,noexec,nosuid ${IMAGE_MARIADB} >/dev/null
                 waitFor mariadb-ac-install-${SUFFIX} 3306
                 CONTAINERPARAMS="-e typo3InstallMysqlDatabaseName=func_test -e typo3InstallMysqlDatabaseUsername=root -e typo3InstallMysqlDatabasePassword=funcp -e typo3InstallMysqlDatabaseHost=mariadb-ac-install-${SUFFIX}"
-                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="${RUNTESTS_DIR_BIN}codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-mariadb ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -844,7 +860,7 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name mysql-ac-install-${SUFFIX} --network ${NETWORK} -d -e MYSQL_ROOT_PASSWORD=funcp --tmpfs /var/lib/mysql/:rw,noexec,nosuid ${IMAGE_MYSQL} >/dev/null
                 waitFor mysql-ac-install-${SUFFIX} 3306
                 CONTAINERPARAMS="-e typo3InstallMysqlDatabaseName=func_test -e typo3InstallMysqlDatabaseUsername=root -e typo3InstallMysqlDatabasePassword=funcp -e typo3InstallMysqlDatabaseHost=mysql-ac-install-${SUFFIX}"
-                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="${RUNTESTS_DIR_BIN}codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-mysql ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -856,7 +872,7 @@ case ${TEST_SUITE} in
                 ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name postgres-ac-install-${SUFFIX} --network ${NETWORK} -d -e POSTGRES_PASSWORD=funcp -e POSTGRES_USER=funcu --tmpfs /var/lib/postgresql/data:rw,noexec,nosuid ${IMAGE_POSTGRES} >/dev/null
                 waitFor postgres-ac-install-${SUFFIX} 5432
                 CONTAINERPARAMS="-e typo3InstallPostgresqlDatabasePort=5432 -e typo3InstallPostgresqlDatabaseName=${USER} -e typo3InstallPostgresqlDatabaseHost=postgres-ac-install-${SUFFIX} -e typo3InstallPostgresqlDatabaseUsername=funcu -e typo3InstallPostgresqlDatabasePassword=funcp"
-                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="${RUNTESTS_DIR_BIN}codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-postgres ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -868,7 +884,7 @@ case ${TEST_SUITE} in
                     CODECEPION_ENV="--env ci,sqlite,headless"
                 fi
                 CONTAINERPARAMS="-e typo3DatabaseDriver=pdo_sqlite"
-                COMMAND="bin/codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
+                COMMAND="${RUNTESTS_DIR_BIN}codecept run Install -d -c ${RUNTESTS_CODECEPTION_CONFIG_FILE} ${EXTRA_TEST_OPTIONS} ${CODECEPION_ENV} --html reports.html"
                 ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name ac-install-sqlite ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${CONTAINERPARAMS} ${IMAGE_PHP} ${COMMAND}
                 SUITE_EXIT_CODE=$?
                 ;;
@@ -876,12 +892,12 @@ case ${TEST_SUITE} in
         ;;
     buildCss)
         COMMAND="${RUNTESTS_COMMAND_BUILD_CSS}"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-css-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-css-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     buildJavascript)
         COMMAND="${RUNTESTS_COMMAND_BUILD_JS}"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-js-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name build-js-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     cgl)
@@ -889,12 +905,12 @@ case ${TEST_SUITE} in
         if [ -n "${CGLCHECK_DRY_RUN}" ]; then
             CGLCHECK_DRY_RUN="--dry-run --diff"
         fi
-        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/config.php ${RUNTESTS_DIRS_PROJECT}"
+        COMMAND="php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=${RUNTESTS_PHPCSFIXER_CONFIG_FILE} ${RUNTESTS_DIRS_PROJECT}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-${SUFFIX} ${IMAGE_PHP} ${COMMAND}
         SUITE_EXIT_CODE=$?
         ;;
     cglGit)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-git-${SUFFIX} ${IMAGE_PHP} Build/Scripts/cglFixMyCommit.sh ${CGLCHECK_DRY_RUN}
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-git-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}cglFixMyCommit.sh ${CGLCHECK_DRY_RUN}
         SUITE_EXIT_CODE=$?
         ;;
     cglHeader)
@@ -902,59 +918,59 @@ case ${TEST_SUITE} in
         if [ -n "${CGLCHECK_DRY_RUN}" ]; then
             CGLCHECK_DRY_RUN="--dry-run --diff"
         fi
-        COMMAND="php -dxdebug.mode=off bin/php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=Build/php-cs-fixer/header-comment.php ${RUNTESTS_DIRS_PROJECT}"
+        COMMAND="php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}php-cs-fixer fix -v ${CGLCHECK_DRY_RUN} --path-mode intersection --config=${RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE} ${RUNTESTS_DIRS_PROJECT}"
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-header-${SUFFIX} ${IMAGE_PHP} ${COMMAND}
         SUITE_EXIT_CODE=$?
         ;;
     cglHeaderGit)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-header-git-${SUFFIX} ${IMAGE_PHP} Build/Scripts/cglFixMyCommitFileHeader.sh ${CGLCHECK_DRY_RUN}
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name cgl-header-git-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}cglFixMyCommitFileHeader.sh ${CGLCHECK_DRY_RUN}
         SUITE_EXIT_CODE=$?
         ;;
     checkIntegrityPhp)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-annotations-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} php Build/Scripts/phpIntegrityChecker.php -p ${PHP_VERSION}
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-annotations-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} php ${RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE} -p ${PHP_VERSION}
         SUITE_EXIT_CODE=$?
         ;;
     checkBom)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-utf8bom-${SUFFIX} ${IMAGE_PHP} Build/Scripts/checkUtf8Bom.sh
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-utf8bom-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}checkUtf8Bom.sh
         SUITE_EXIT_CODE=$?
         ;;
     checkComposer)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-composer-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/checkIntegrityComposer.php
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-composer-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}checkIntegrityComposer.php
         SUITE_EXIT_CODE=$?
         ;;
     checkExceptionCodes)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-exception-codes-${SUFFIX} ${IMAGE_PHP} Build/Scripts/duplicateExceptionCodeCheck.sh
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-exception-codes-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}duplicateExceptionCodeCheck.sh
         SUITE_EXIT_CODE=$?
         ;;
     checkExtensionScannerRst)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-extensionscanner-rst-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/extensionScannerRstFileReferences.php
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-extensionscanner-rst-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}extensionScannerRstFileReferences.php
         SUITE_EXIT_CODE=$?
         ;;
     checkFilePathLength)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-file-path-length-${SUFFIX} ${IMAGE_PHP} Build/Scripts/maxFilePathLength.sh
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-file-path-length-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}maxFilePathLength.sh
         SUITE_EXIT_CODE=$?
         ;;
     checkGitSubmodule)
         COMMAND="if [ \$(git submodule status 2>&1 | wc -l) -ne 0 ]; then echo \"Found a submodule definition in repository\"; exit 1; fi"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-git-submodule-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-git-submodule-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     checkGruntClean)
-        COMMAND="find '${RUNTESTS_DIRS_PROJECT_GRUNT}' -name '*.js' -not -path '*/Fixtures/*' -exec rm '{}' + && cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt build; cd ..; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-grunt-clean-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_CLEAN}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-grunt-clean-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     checkIsoDatabase)
-        COMMAND="git checkout -- composer.json; git checkout -- composer.lock; php -dxdebug.mode=off Build/Scripts/updateIsoDatabase.php; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-iso-database-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        COMMAND="git checkout -- composer.json; git checkout -- composer.lock; php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}updateIsoDatabase.php; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-iso-database-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     checkPermissions)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-permissions-${SUFFIX} ${IMAGE_PHP} Build/Scripts/checkFilePermissions.sh
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-permissions-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}checkFilePermissions.sh
         SUITE_EXIT_CODE=$?
         ;;
     checkRst)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-rst-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/validateRstFiles.php
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name check-rst-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}validateRstFiles.php
         SUITE_EXIT_CODE=$?
         ;;
     clean)
@@ -977,38 +993,43 @@ case ${TEST_SUITE} in
         ;;
     composer)
         COMMAND=(composer "$@")
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} "${COMMAND[@]}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-${SUFFIX} -e COMPOSER_CACHE_DIR=${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} "${COMMAND[@]}"
         SUITE_EXIT_CODE=$?
         ;;
     composerInstall)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} composer install --no-progress --no-interaction
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-${SUFFIX} -e COMPOSER_CACHE_DIR=${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} composer install --no-progress --no-interaction
         SUITE_EXIT_CODE=$?
         ;;
     composerInstallMax)
         COMMAND="composer config --unset platform.php; composer update --no-progress --no-interaction; composer dumpautoload"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-max-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-max-${SUFFIX} -e COMPOSER_CACHE_DIR=${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     composerInstallMin)
         COMMAND="composer config platform.php ${PHP_VERSION}.0; composer update --prefer-lowest --no-progress --no-interaction; composer dumpautoload"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-min-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-install-min-${SUFFIX} -e COMPOSER_CACHE_DIR=${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     composerTestDistribution)
-        COMMAND="cd Build/composer; rm -rf composer.json composer.lock public/index.php public/typo3 public/typo3conf/ext var/ vendor/; cp composer.dist.json composer.json; composer update --no-progress --no-interaction"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-test-distribution-${SUFFIX} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        COMMAND="cd ${RUNTESTS_DIR_BUILD}/composer; rm -rf composer.json composer.lock public/index.php public/typo3 public/typo3conf/ext var/ vendor/; cp composer.dist.json composer.json; composer update --no-progress --no-interaction"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-test-distribution-${SUFFIX} -e COMPOSER_CACHE_DIR=${CORE_ROOT}/${RUNTESTS_DIR_CACHE}composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     composerValidate)
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-validate-${SUFFIX} ${IMAGE_PHP} composer validate
         SUITE_EXIT_CODE=$?
         ;;
+    custom)
+        COMMAND="$@")
+        echo "Running custom script... $COMMAND"
+        #SUITE_EXIT_CODE=$?
+        ;;
     functional)
         if [ "${CHUNKS}" -gt 0 ]; then
-            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name func-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off Build/Scripts/splitFunctionalTests.php -v ${CHUNKS}
-            COMMAND=(bin/phpunit -c Build/phpunit/FunctionalTests-Job-${THISCHUNK}.xml --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
+            ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name func-splitter-${SUFFIX} ${IMAGE_PHP} php -dxdebug.mode=off ${RUNTESTS_DIR_BUILDER}splitFunctionalTests.php -v ${CHUNKS}
+            COMMAND=(${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_DIR_PHPUNIT_FUNCTIONAL}FunctionalTests-Job-${THISCHUNK}.xml --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
         else
-            COMMAND=(bin/phpunit -c Build/phpunit/FunctionalTests.xml --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
+            COMMAND=(${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST} --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
         fi
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name redis-func-${SUFFIX} --network ${NETWORK} -d ${IMAGE_REDIS} >/dev/null
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name memcached-func-${SUFFIX} --network ${NETWORK} -d ${IMAGE_MEMCACHED} >/dev/null
@@ -1049,7 +1070,7 @@ case ${TEST_SUITE} in
         esac
         ;;
     functionalDeprecated)
-        COMMAND=(bin/phpunit -c Build/phpunit/FunctionalTestsDeprecated.xml --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
+        COMMAND=(${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED} --exclude-group not-${DBMS} ${EXTRA_TEST_OPTIONS} "$@")
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name redis-func-dep-${SUFFIX} --network ${NETWORK} -d ${IMAGE_REDIS} >/dev/null
         ${CONTAINER_BIN} run --rm ${CI_PARAMS} --name memcached-func-dep-${SUFFIX} --network ${NETWORK} -d ${IMAGE_MEMCACHED} >/dev/null
         waitFor redis-func-dep-${SUFFIX} 6379
@@ -1089,70 +1110,70 @@ case ${TEST_SUITE} in
         esac
         ;;
     listExceptionCodes)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name list-exception-codes-${SUFFIX} ${IMAGE_PHP} Build/Scripts/duplicateExceptionCodeCheck.sh -p
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name list-exception-codes-${SUFFIX} ${IMAGE_PHP} ${RUNTESTS_DIR_BUILDER}duplicateExceptionCodeCheck.sh -p
         SUITE_EXIT_CODE=$?
         ;;
     lintHtml)
-        COMMAND="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt exec:lintspaces"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-html-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_LINT}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-html-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     lintPhp)
         COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} -name \\*.php -print0 | xargs -0 -n1 -P"'$(nproc 2>/dev/null || echo 4)'" php -dxdebug.mode=off -l >/dev/null"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     lintScss)
-        COMMAND="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt stylelint"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-css-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_LINT_STYLE}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-css-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     lintServicesYaml)
-        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --parse-tags"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} -name 'Services.yaml' | xargs -r php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}yaml-lint --parse-tags"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     lintTypescript)
-        COMMAND="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt eslint"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-typescript-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS} /bin/sh -c "${COMMAND}"
+        COMMAND="${RUNTESTS_COMMAND_BUILD_LINT_TS}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-typescript-${SUFFIX} -e HOME=${CORE_ROOT}/${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     lintYaml)
         EXCLUDE_INVALID_FIXTURE_YAML_FILES="--exclude typo3/sysext/form/Tests/Unit/Mvc/Configuration/Fixtures/Invalid.yaml"
-        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} \\( -name '*.yaml' -o -name '*.yml' \\) ! -name 'Services.yaml' | xargs -r php -dxdebug.mode=off bin/yaml-lint --no-parse-tags ${EXCLUDE_INVALID_FIXTURE_YAML_FILES}"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        COMMAND="php -v | grep '^PHP'; find ${RUNTESTS_DIRS_PROJECT} \\( -name '*.yaml' -o -name '*.yml' \\) ! -name 'Services.yaml' | xargs -r php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}yaml-lint --no-parse-tags ${EXCLUDE_INVALID_FIXTURE_YAML_FILES}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name lint-php-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     npm)
         COMMAND=(npm "$@")
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} -w ${CORE_ROOT}/Build -e HOME=${CORE_ROOT}/.cache --name npm-${SUFFIX} ${IMAGE_NODEJS} "${COMMAND[@]}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} -w ${CORE_ROOT}/${RUNTESTS_DIR_BUILD} -e HOME=${CORE_ROOT}${RUNTESTS_DIR_CACHE} --name npm-${SUFFIX} ${IMAGE_NODEJS} "${COMMAND[@]}"
         SUITE_EXIT_CODE=$?
         ;;
     phpstan)
-        COMMAND=(php -dxdebug.mode=off bin/phpstan analyse -c Build/phpstan/${PHPSTAN_CONFIG_FILE} --no-progress --no-interaction --memory-limit 4G "$@")
+        COMMAND=(php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}phpstan analyse -c ${PHPSTAN_CONFIG_FILE} --no-progress --no-interaction --memory-limit 4G "$@")
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name phpstan-${SUFFIX} ${IMAGE_PHP} "${COMMAND[@]}"
         SUITE_EXIT_CODE=$?
         ;;
     phpstanGenerateBaseline)
-        COMMAND="php -dxdebug.mode=off bin/phpstan analyse -c Build/phpstan/${PHPSTAN_CONFIG_FILE} --no-progress --no-interaction --memory-limit 4G --generate-baseline=Build/phpstan/phpstan-baseline.neon"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name phpstan-baseline-${SUFFIX} ${IMAGE_PHP} /bin/sh -c "${COMMAND}"
+        COMMAND="php -dxdebug.mode=off ${RUNTESTS_DIR_BIN}phpstan analyse -c ${PHPSTAN_CONFIG_FILE} --no-progress --no-interaction --memory-limit 4G --generate-baseline=${RUNTESTS_PHPSTAN_BASELINE_FILE}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name phpstan-baseline-${SUFFIX} ${IMAGE_PHP} ${CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     unit)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} bin/phpunit -c Build/phpunit/UnitTests.xml ${EXTRA_TEST_OPTIONS} "$@"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} ${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_PHPUNIT_FILE_UNITTEST} ${EXTRA_TEST_OPTIONS} "$@"
         SUITE_EXIT_CODE=$?
         ;;
     unitDeprecated)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-deprecated-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} bin/phpunit -c Build/phpunit/UnitTestsDeprecated.xml ${EXTRA_TEST_OPTIONS} "$@"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-deprecated-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} ${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_PHPUNIT_FILE_UNITTEST_DEPRECATED} ${EXTRA_TEST_OPTIONS} "$@"
         SUITE_EXIT_CODE=$?
         ;;
     unitJavascript)
-        COMMAND="cd Build; npm ci || exit 1; CHROME_SANDBOX=false BROWSERS=chrome npm run test"
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-javascript-${SUFFIX} -e HOME=${CORE_ROOT}/.cache ${IMAGE_NODEJS_CHROME} /bin/sh -c "${COMMAND}"
+        COMMAND="${RUNTESTS_COMMAND_UNIT_JS}"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-javascript-${SUFFIX} -e HOME=${CORE_ROOT}${RUNTESTS_DIR_CACHE} ${IMAGE_NODEJS_CHROME} ${RUNTESTS_COMMAND_CONTAINER_SHELL} -c "${COMMAND}"
         SUITE_EXIT_CODE=$?
         ;;
     unitRandom)
-        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-random-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} bin/phpunit -c Build/phpunit/UnitTests.xml --order-by=random ${EXTRA_TEST_OPTIONS} ${PHPUNIT_RANDOM} "$@"
+        ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name unit-random-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} ${RUNTESTS_DIR_BIN}phpunit -c ${RUNTESTS_PHPUNIT_FILE_UNITTEST} --order-by=random ${EXTRA_TEST_OPTIONS} ${PHPUNIT_RANDOM} "$@"
         SUITE_EXIT_CODE=$?
         ;;
     update)
