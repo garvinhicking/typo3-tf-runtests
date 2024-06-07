@@ -35,7 +35,18 @@ if (PHP_SAPI !== 'cli') {
     die('Script must be called from command line.' . chr(10));
 }
 
-require __DIR__ . '/../../vendor/autoload.php';
+if (getenv('CORE_ROOT')) {
+    define('CORE_ROOT', getenv('RUNTESTS_DIR_ROOT'));
+} else {
+    define('CORE_ROOT', __DIR__ . '/../..');
+}
+if (getenv('RUNTESTS_DIRS_PROJECT')) {
+    define('PROJECT_ROOT', getenv('RUNTESTS_DIRS_PROJECT'));
+} else {
+    define('PROJECT_ROOT', 'typo3/sysext/');
+}
+
+require CORE_ROOT . '/vendor/autoload.php';
 
 /**
  * This script is typically executed by runTests.sh.
@@ -81,7 +92,7 @@ class SplitFunctionalTests
         // Find functional test files
         $testFiles = (new Finder())
             ->files()
-            ->in(__DIR__ . '/../../typo3/sysext/*/Tests/Functional')
+            ->in(CORE_ROOT . PROJECT_ROOT . '/*/Tests/Functional')
             ->name('/Test\.php$/')
             ->sortByName()
         ;
@@ -91,7 +102,8 @@ class SplitFunctionalTests
         foreach ($testFiles as $file) {
             /** @var $file SplFileInfo */
             $relativeFilename = $file->getRealPath();
-            preg_match('/.*typo3\/sysext\/(.*)$/', $relativeFilename, $matches);
+            // @TODO: Define realpath(CORE_ROOT.PROJECT_ROOT) and then go from there, to prevent hardcoded directory name here.
+            preg_match('/.*typo3\/sysext\/(.*)$/', $relativeFilename, $matches)) {
             $relativeFilename = '../../typo3/sysext/' . $matches[1];
 
             $ast = $parser->parse($file->getContents());
@@ -151,6 +163,7 @@ class SplitFunctionalTests
 
         for ($i = 1; $i <= $numberOfChunks; $i++) {
             // Write phpunit xml files
+            // @TODO: Use env variables here
             file_put_contents(__DIR__ . '/../phpunit/' . 'FunctionalTests-Job-' . $i . '.xml', $xml[$i]->asXml());
         }
 
