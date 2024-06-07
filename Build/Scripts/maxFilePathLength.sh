@@ -19,7 +19,7 @@
 LIMIT=160
 
 RESULT=0
-for FILE in $(find typo3/ -type f); do
+for FILE in $(find ${RUNTESTS_DIRS_PROJECT:=typo3/} -type f); do
     LENGTH=`echo ${FILE} |  wc -m`
     if [[ ${LENGTH} -gt ${LIMIT} ]]; then
         echo "Maximum path length ${LIMIT} violated with ${LENGTH} characters for file ${FILE}"

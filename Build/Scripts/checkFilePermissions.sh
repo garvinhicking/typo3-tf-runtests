@@ -17,7 +17,7 @@ IGNORE=(
 COUNTER=0
 
 # git stores files either 0644 or 0755. To find files with executable bit set, we test for "owner has x"
-for FILE in $(find typo3/ -type f -perm /u+x); do
+for FILE in $(find ${RUNTESTS_DIRS_PROJECT:=typo3/} -type f -perm /u+x); do
     if ! [[ ${IGNORE[*]} =~ "$FILE" ]]
     then
         echo $FILE
