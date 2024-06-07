@@ -406,8 +406,22 @@ cd "$THIS_SCRIPT_DIR" || exit 1
 # Source "runTests.env" to load variables containing path definitions.
 # - All variables matching RUNTESTS_DIR_ will ensure a trailing slash.
 # - All variables defined use a "${RUNTESTS_DIR_:=...}" definition to allow
-#   overriding these from the outside script call (`RUNTESTS_DIR_VENDOR="Build/something/vendor" .Build/Scripts/runTests.sh`)
-if [ -f "${THIS_SCRIPT_DIR}/runTests.env" ] ; then
+#   overriding these from the outside script call for example: (`RUNTESTS_DIR_VENDOR="Build/something/vendor" .Build/Scripts/runTests.sh`)
+RUNTESTS_ENV="${RUNTESTS_ENV:=../../runTests.env}"
+
+# Check for runTeste.env, use $RUNTEST_ENV if specified first. If empty, check for "../../runTests.env" by default to shorten the search.
+if [ ! -f "${RUNTESTS_ENV}" ] ; then
+  # Begin searching one directory upwards if there is a runTests.env
+  runtest_check_dir=$(dirname "$THIS_SCRIPT_DIR")
+  while [[ ! -f "$runtest_check_dir/runTests.env" && "$runtest_check_dir" != "/" && "$runtest_check_dir" != "" ]]; do
+    runtest_check_dir=$(dirname "$runtest_check_dir")
+  done
+  RUNTESTS_ENV="${runtest_check_dir}/runTests.env"
+fi
+
+if [ -f "${RUNTESTS_ENV}" ] ; then
+  echo "Using runTests config from: ${RUNTESTS_ENV}"
+
   source "${THIS_SCRIPT_DIR}/runTests.env"
 
   # Ensure all "RUNTESTS_DIR_" variables end with trailing slash.
