@@ -46,14 +46,14 @@ handleDbmsOptions() {
             if [ "${DATABASE_DRIVER}" != "mysqli" ] && [ "${DATABASE_DRIVER}" != "pdo_mysql" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="10.4"
             if ! [[ ${DBMS_VERSION} =~ ^(10.4|10.5|10.6|10.7|10.8|10.9|10.10|10.11|11.0|11.1)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -62,14 +62,14 @@ handleDbmsOptions() {
             if [ "${DATABASE_DRIVER}" != "mysqli" ] && [ "${DATABASE_DRIVER}" != "pdo_mysql" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="8.0"
             if ! [[ ${DBMS_VERSION} =~ ^(8.0|8.1|8.2|8.3)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -77,14 +77,14 @@ handleDbmsOptions() {
             if [ -n "${DATABASE_DRIVER}" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             [ -z "${DBMS_VERSION}" ] && DBMS_VERSION="10"
             if ! [[ ${DBMS_VERSION} =~ ^(10|11|12|13|14|15|16)$ ]]; then
                 echo "Invalid combination -d ${DBMS} -i ${DBMS_VERSION}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
@@ -92,20 +92,20 @@ handleDbmsOptions() {
             if [ -n "${DATABASE_DRIVER}" ]; then
                 echo "Invalid combination -d ${DBMS} -a ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             if [ -n "${DBMS_VERSION}" ]; then
                 echo "Invalid combination -d ${DBMS} -i ${DATABASE_DRIVER}" >&2
                 echo >&2
-                echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+                echo "${HELP_MESSAGE}" >&2
                 exit 1
             fi
             ;;
         *)
             echo "Invalid option -d ${DBMS}" >&2
             echo >&2
-            echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+            echo "${HELP_MESSAGE}" >&2
             exit 1
             ;;
     esac
@@ -342,46 +342,52 @@ Options:
 
 Examples:
     # Run all core unit tests using PHP 8.2
-    ./Build/Scripts/runTests.sh
-    ./Build/Scripts/runTests.sh -s unit
+    $THIS_SCRIPT_NAME
+    $THIS_SCRIPT_NAME -s unit
 
     # Run all core units tests and enable xdebug (have a PhpStorm listening on port 9003!)
-    ./Build/Scripts/runTests.sh -x
+    $THIS_SCRIPT_NAME -x
 
     # Run unit tests in phpunit with xdebug on PHP 8.3 and filter for test filterByValueRecursiveCorrectlyFiltersArray
-    ./Build/Scripts/runTests.sh -x -p 8.3 -- --filter filterByValueRecursiveCorrectlyFiltersArray
+    $THIS_SCRIPT_NAME -x -p 8.3 -- --filter filterByValueRecursiveCorrectlyFiltersArray
 
     # Run functional tests in phpunit with a filtered test method name in a specified file
     # example will currently execute two tests, both of which start with the search term
-    ./Build/Scripts/runTests.sh -s functional -- \
+    $THIS_SCRIPT_NAME -s functional -- \
       --filter datetimeInstanceCanBePersistedToDatabaseIfTypeIsExplicitlySpecified \
       typo3/sysext/core/Tests/Functional/Database/ConnectionTest.php
 
     # Run functional tests on postgres with xdebug, php 8.3 and execute a restricted set of tests
-    ./Build/Scripts/runTests.sh -x -p 8.3 -s functional -d postgres typo3/sysext/core/Tests/Functional/Authentication
+    $THIS_SCRIPT_NAME -x -p 8.3 -s functional -d postgres typo3/sysext/core/Tests/Functional/Authentication
 
     # Run functional tests on postgres 11
-    ./Build/Scripts/runTests.sh -s functional -d postgres -i 11
+    $THIS_SCRIPT_NAME -s functional -d postgres -i 11
 
     # Run restricted set of application acceptance tests
-    ./Build/Scripts/runTests.sh -s acceptance typo3/sysext/core/Tests/Acceptance/Application/Login/BackendLoginCest.php:loginButtonMouseOver
+    $THIS_SCRIPT_NAME -s acceptance typo3/sysext/core/Tests/Acceptance/Application/Login/BackendLoginCest.php:loginButtonMouseOver
 
     # Run installer tests of a new instance on sqlite
-    ./Build/Scripts/runTests.sh -s acceptanceInstall -d sqlite
+    $THIS_SCRIPT_NAME -s acceptanceInstall -d sqlite
 
     # Run composer require to require a dependency
-    ./Build/Scripts/runTests.sh -s composer -- require --dev typo3/testing-framework:dev-main
+    $THIS_SCRIPT_NAME -s composer -- require --dev typo3/testing-framework:dev-main
 
     # Some composer command examples
-    ./Build/Scripts/runTests.sh -s composer -- dumpautoload
-    ./Build/Scripts/runTests.sh -s composer -- info | grep "symfony"
+    $THIS_SCRIPT_NAME -s composer -- dumpautoload
+    $THIS_SCRIPT_NAME -s composer -- info | grep "symfony"
 
     # Some npm command examples
-    ./Build/Scripts/runTests.sh -s npm -- audit
-    ./Build/Scripts/runTests.sh -s npm -- ci
-    ./Build/Scripts/runTests.sh -s npm -- run build
-    ./Build/Scripts/runTests.sh -s npm -- run watch:build
-    ./Build/Scripts/runTests.sh -s npm -- install --save bootstrap@^5.3.2
+    $THIS_SCRIPT_NAME -s npm -- audit
+    $THIS_SCRIPT_NAME -s npm -- ci
+    $THIS_SCRIPT_NAME -s npm -- run build
+    $THIS_SCRIPT_NAME -s npm -- run watch:build
+    $THIS_SCRIPT_NAME -s npm -- install --save bootstrap@^5.3.2
+
+    # Custom sub-tasks dispatcher (see custom-runTests.sh)
+    # Executes "custom-runTests.verboseStan.sh" (created by you!) and passes
+    # parameters ("-param1 -param2 --param3...") plus local variables along
+    $THIS_SCRIPT_NAME -s custom -- verboseStan -param1 -param2 --param3
+
 EOF
 }
 
@@ -591,7 +597,7 @@ if [ ${#INVALID_OPTIONS[@]} -ne 0 ]; then
         echo "-"${I} >&2
     done
     echo >&2
-    echo "Use \".Build/Scripts/runTests.sh -h\" to display help and valid options" >&2
+    echo "$HELP_MESSAGE" >&2
     exit 1
 fi
 
@@ -1206,8 +1212,8 @@ if [[ ${TEST_SUITE} =~ ^(functional|functionalDeprecated|acceptance|acceptanceCo
 fi
 if [[ -n ${EXTRA_TEST_OPTIONS} ]]; then
     echo " Note: Using -e is deprecated. Simply add the options at the end of the command."
-    echo " Instead of: Build/Scripts/runTests.sh -s ${TEST_SUITE} -e '${EXTRA_TEST_OPTIONS}' $@"
-    echo " use:        Build/Scripts/runTests.sh -s ${TEST_SUITE} -- ${EXTRA_TEST_OPTIONS} $@"
+    echo " Instead of: ${THIS_SCRIPT_NAME} -s ${TEST_SUITE} -e '${EXTRA_TEST_OPTIONS}' $@"
+    echo " use:        ${THIS_SCRIPT_NAME} -s ${TEST_SUITE} -- ${EXTRA_TEST_OPTIONS} $@"
 fi
 if [[ ${SUITE_EXIT_CODE} -eq 0 ]]; then
     echo "SUCCESS" >&2
