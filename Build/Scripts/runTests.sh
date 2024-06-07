@@ -392,10 +392,10 @@ if ! type "docker" >/dev/null 2>&1 && ! type "podman" >/dev/null 2>&1; then
 fi
 
 # Go to the directory this script is located, so everything else is relative
-# to this dir, no matter from where this script is called, then go up two dirs.
+# to this dir, no matter from where this script is called. Later, go to the
+# project root.
 THIS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 cd "$THIS_SCRIPT_DIR" || exit 1
-cd ../../ || exit 1
 
 # Source "runTests.env" to load variables containing path definitions.
 # - All variables matching RUNTESTS_DIR_ will ensure a trailing slash.
@@ -471,6 +471,8 @@ else
   RUNTESTS_COMMAND_UNIT_JS="cd Build; npm ci || exit 1; CHROME_SANDBOX=false BROWSERS=chrome npm run test"
 fi
 
+# Now go into the actual "base" directory.
+cd "$RUNTESTS_DIR_ROOT" || exit 1
 CORE_ROOT="${PWD}"
 
 # Default variables
