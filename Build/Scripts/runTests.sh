@@ -492,7 +492,8 @@ CHUNKS=0
 THISCHUNK=0
 CONTAINER_BIN=""
 COMPOSER_ROOT_VERSION="13.2.x-dev"
-PHPSTAN_CONFIG_FILE="phpstan.local.neon"
+CONTAINER_SHELL="/bin/sh"
+PHPSTAN_CONFIG_FILE="$RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL"
 CONTAINER_INTERACTIVE="-it --init"
 HOST_UID=$(id -u)
 HOST_PID=$(id -g)
@@ -501,6 +502,8 @@ SUFFIX=$(echo $RANDOM)
 NETWORK="typo3-core-${SUFFIX}"
 CI_PARAMS="${CI_PARAMS:-}"
 CONTAINER_HOST="host.docker.internal"
+THIS_SCRIPT_NAME="${RUNTESTS_DIR_BUILDER}runTests.sh"
+HELP_MESSAGE="Use \"${THIS_SCRIPT_NAME} -h\" to display help and valid options"
 
 # Option parsing updates above default vars
 # Reset in case getopts has been used previously in the shell
