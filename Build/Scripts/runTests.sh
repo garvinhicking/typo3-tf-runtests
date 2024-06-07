@@ -111,51 +111,50 @@ handleDbmsOptions() {
     esac
 }
 
+cleanFiles() {
+  local files=($"@")
+
+  # Ensure anything is handed here
+  if [ ${#files[@]} -eq 0 ]; then
+      return
+  fi
+
+  # @TODO: Really remove
+  ls -la "${files[@]}"
+}
+
 cleanBuildFiles() {
     echo -n "Clean builds ... "
-    rm -rf \
-        Build/JavaScript \
-        Build/node_modules
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_BUILD)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
 cleanCacheFiles() {
     echo -n "Clean caches ... "
-    rm -rf \
-        .cache \
-        Build/.cache \
-        Build/composer/.cache/ \
-        .php-cs-fixer.cache
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_CACHE)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
 cleanTestFiles() {
     # composer distribution test
     echo -n "Clean composer distribution test ... "
-    rm -rf \
-        Build/composer/composer.json \
-        Build/composer/composer.lock \
-        Build/composer/public/index.php \
-        Build/composer/public/typo3 \
-        Build/composer/public/typo3conf/ext \
-        Build/composer/var/ \
-        Build/composer/vendor/
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_COMPOSER)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 
     # test related
     echo -n "Clean test related files ... "
-    rm -rf \
-        Build/phpunit/FunctionalTests-Job-*.xml \
-        typo3/sysext/core/Tests/AcceptanceTests-Job-* \
-        typo3/sysext/core/Tests/Acceptance/Support/_generated \
-        typo3temp/var/tests/
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_TESTS)
+    cleanFiles "${GARBAGE[@]}"
     echo "done"
 }
 
 cleanRenderedDocumentationFiles() {
     echo -n "Clean rendered documentation files ... "
-    rm -rf \
-        ../../../typo3/sysext/*/Documentation-GENERATED-temp
+    RUNTESTS_CLEANUP=($RUNTESTS_CLEANUP_DOCS)
+    cleanFiles "${RUNTESTS_CLEANUP[@]}"
     echo "done"
 }
 
