@@ -383,10 +383,10 @@ Examples:
     $THIS_SCRIPT_NAME -s npm -- run watch:build
     $THIS_SCRIPT_NAME -s npm -- install --save bootstrap@^5.3.2
 
-    # Custom sub-tasks dispatcher (see runTests.custom.sh)
-    # Executes "runTests.MyLinting.sh" (created by you!) and passes
+    # Custom sub-tasks dispatcher (see custom-runTests.sh)
+    # Executes "custom-runTests.verboseStan.sh" (created by you!) and passes
     # parameters ("-param1 -param2 --param3...") plus local variables along
-    $THIS_SCRIPT_NAME -s custom -- myLinting -param1 -param2 --param3
+    $THIS_SCRIPT_NAME -s custom -- verboseStan -param1 -param2 --param3
 
 EOF
 }
@@ -464,9 +464,9 @@ else
   RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED="${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED:=Build/phpunit/FunctionalTestsDeprecated.xml}"
   RUNTESTS_DIR_PHPUNIT_FUNCTIONAL="${RUNTESTS_DIR_PHPUNIT_FUNCTIONAL:=Build/phpunit/}"
   RUNTESTS_CODECEPTION_CONFIG_FILE="${RUNTESTS_CODECEPTION_CONFIG_FILE:=typo3/sysext/core/Tests/codeception.yml}"
-  RUNTESTS_PHPCSFIXER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_CONFIG_FILE:Build/php-cs-fixer/config.php}"
-  RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE:Build/php-cs-fixer/header-comment.php}"
-  RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE="${RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE:Build/Scripts/phpIntegrityChecker.php}"
+  RUNTESTS_PHPCSFIXER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_CONFIG_FILE:=Build/php-cs-fixer/config.php}"
+  RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE:=Build/php-cs-fixer/header-comment.php}"
+  RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE="${RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE:=Build/Scripts/phpIntegrityChecker.php}"
 
   RUNTESTS_COMMAND_BUILD_CSS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt css"
   RUNTESTS_COMMAND_BUILD_JS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
@@ -477,6 +477,7 @@ else
   RUNTESTS_COMMAND_UNIT_JS="cd Build; npm ci || exit 1; CHROME_SANDBOX=false BROWSERS=chrome npm run test"
 fi
 
+# Now go into the actual "base" directory.
 cd "$RUNTESTS_DIR_ROOT" || exit 1
 CORE_ROOT="${PWD}"
 
@@ -1020,9 +1021,15 @@ case ${TEST_SUITE} in
         SUITE_EXIT_CODE=$?
         ;;
     custom)
-        COMMAND="$@")
-        echo "Running custom script... $COMMAND"
-        #SUITE_EXIT_CODE=$?
+        COMMAND="$@"
+        if [[ -z "$COMMAND" ]]; then
+          echo "No custom command specified. Example usage:"
+          echo "> $THIS_SCRIPT_NAME -s custom -- verboseStan -param1 -param2 --param3"
+          exit 1
+        else
+          source "${RUNTESTS_DIR_BUILDER}custom-runTests.sh"
+          SUITE_EXIT_CODE=$?
+        fi
         ;;
     functional)
         if [ "${CHUNKS}" -gt 0 ]; then

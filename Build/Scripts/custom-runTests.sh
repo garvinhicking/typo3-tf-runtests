@@ -14,13 +14,16 @@ if [[ -z "$RUNTESTS_DIR_ROOT" ]]; then
   exit 1
 fi
 
-# @TODO
-# Create example how to evaluate extra parameters and execute CONTAINER_BIN etc.
-# Maybe something like "-s custom -- psalm"
+BASE_COMMAND=$(echo $COMMAND | cut -d' ' -f1)
+CUSTOM_COMMAND_ARGUMENTS=$(echo $COMMAND | cut -d' ' -f2-)
+SUB_SCRIPT="${RUNTESTS_DIR_BUILDER}custom-runTests.${BASE_COMMAND}.sh"
 
-# @TODO
-# - Check for the first parameter (for example "myLint")
-# - Check if such a .sh file exists
-# - If no, bail out with error
-# - If yes, call that script too (runTests.myLint.sh)
-
+if [[ -f "$SUB_SCRIPT" ]];
+then
+  echo "Dispatching: $SUB_SCRIPT $COMMAND_ARGUMENTS"
+  source $SUB_SCRIPT
+  return $?
+else
+  echo "Custom argument $SUB_SCRIPT not found or executable."
+  return 1
+fi
