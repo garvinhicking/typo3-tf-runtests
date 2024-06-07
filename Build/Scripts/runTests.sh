@@ -181,26 +181,26 @@ Usage: $0 [options] [file]
 Options:
     -s <...>
         Specifies the test suite to run
-            - acceptance: main application acceptance tests
-            - acceptanceComposer: main application acceptance tests
-            - acceptanceInstall: installation acceptance tests, only with -d mariadb|postgres|sqlite
+            - acceptance: main application acceptance tests [CORE-ONLY]
+            - acceptanceComposer: main application acceptance tests [CORE-ONLY]
+            - acceptanceInstall: installation acceptance tests, only with -d mariadb|postgres|sqlite [CORE-ONLY]
             - buildCss: execute scss to css builder
             - buildJavascript: execute typescript to javascript builder
             - cgl: test and fix all core php files
             - cglGit: test and fix latest committed patch for CGL compliance
             - cglHeader: test and fix file header for all core php files
             - cglHeaderGit: test and fix latest committed patch for CGL file header compliance
-            - checkBom: check UTF-8 files do not contain BOM
-            - checkComposer: check composer.json files for version integrity
-            - checkExceptionCodes: test core for duplicate exception codes
-            - checkExtensionScannerRst: test all .rst files referenced by extension scanner exist
+            - checkBom: check UTF-8 files do not contain BOM [CORE-ONLY]
+            - checkComposer: check composer.json files for version integrity [CORE-ONLY]
+            - checkExceptionCodes: test core for duplicate exception codes [CORE-ONLY]
+            - checkExtensionScannerRst: test all .rst files referenced by extension scanner exist [CORE-ONLY]
             - checkFilePathLength: test core file paths do not exceed maximum length
             - checkGitSubmodule: test core git has no sub modules defined
             - checkGruntClean: Verify "grunt build" is clean. Warning: Executes git commands! Usually used in CI only.
-            - checkIntegrityPhp: check php code for with registered integrity rules
-            - checkIsoDatabase: Verify "updateIsoDatabase.php" does not change anything.
+            - checkIntegrityPhp: check php code for with registered integrity rules [CORE-ONLY]
+            - checkIsoDatabase: Verify "updateIsoDatabase.php" does not change anything. [CORE-ONLY]
             - checkPermissions: test some core files for correct executable bits
-            - checkRst: test .rst files for integrity
+            - checkRst: test .rst files for integrity [CORE-ONLY]
             - clean: clean up build, cache and testing related files and folders
             - cleanBuild: clean up build related files and folders
             - cleanCache: clean up cache related files and folders
