@@ -422,7 +422,7 @@ fi
 if [ -f "${RUNTESTS_ENV}" ] ; then
   echo "Using runTests config from: ${RUNTESTS_ENV}"
 
-  source "${THIS_SCRIPT_DIR}/runTests.env"
+  source "${RUNTESTS_ENV}"
 
   # Ensure all "RUNTESTS_DIR_" variables end with trailing slash.
   while IFS='=' read -r name value ; do
