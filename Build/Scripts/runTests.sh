@@ -212,6 +212,7 @@ Options:
             - composerInstallMin: "composer update --prefer-lowest", with platform.php set to PHP version x.x.0.
             - composerTestDistribution: "composer update" in Build/composer to verify core dependencies
             - composerValidate: "composer validate"
+            - custom: Dispatch and execute additional runTests.sh sub tasks, see examples.
             - functional: PHP functional tests
             - functionalDeprecated: deprecated PHP functional tests
             - listExceptionCodes: list core exception codes in JSON format
@@ -426,6 +427,7 @@ else
   RUNTESTS_DIR_BIN="${RUNTESTS_DIR_BIN:=bin/}"
   RUNTESTS_DIR_TESTTEMP="${RUNTESTS_DIR_TESTTEMP:=typo3temp/var/tests/}"
   RUNTESTS_DIR_CACHE="${RUNTESTS_DIR_TESTTEMP:=.cache/}"
+  RUNTESTS_DIR_CUSTOM="${RUNTESTS_DIR_CUSTOM:=Build/Scripts/}"
 
   RUNTESTS_DIRS_CACHE="$RUNTESTS_DIR_CACHE $RUNTESTS_DIR_TESTTEMP"
   RUNTESTS_DIRS_PROJECT="${RUNTESTS_DIRS_PROJECT:=typo3/}"
@@ -1018,6 +1020,17 @@ case ${TEST_SUITE} in
     composerValidate)
         ${CONTAINER_BIN} run ${CONTAINER_COMMON_PARAMS} --name composer-validate-${SUFFIX} ${IMAGE_PHP} composer validate
         SUITE_EXIT_CODE=$?
+        ;;
+    custom)
+        COMMAND="$@"
+        if [[ -z "$COMMAND" ]]; then
+          echo "No custom command specified. Example usage:"
+          echo "> $THIS_SCRIPT_NAME -s custom -- verboseStan -param1 -param2 --param3"
+          exit 1
+        else
+          source "${RUNTESTS_DIR_BUILDER}custom-runTests.sh"
+          SUITE_EXIT_CODE=$?
+        fi
         ;;
     functional)
         if [ "${CHUNKS}" -gt 0 ]; then
