@@ -396,6 +396,81 @@ fi
 THIS_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null && pwd)"
 cd "$THIS_SCRIPT_DIR" || exit 1
 cd ../../ || exit 1
+
+# Source "runTests.env" to load variables containing path definitions.
+# - All variables matching RUNTESTS_DIR_ will ensure a trailing slash.
+# - All variables defined use a "${RUNTESTS_DIR_:=...}" definition to allow
+#   overriding these from the outside script call (`RUNTESTS_DIR_VENDOR="Build/something/vendor" .Build/Scripts/runTests.sh`)
+if [ -f "${THIS_SCRIPT_DIR}/runTests.env" ] ; then
+  source "${THIS_SCRIPT_DIR}/runTests.env"
+
+  # Ensure all "RUNTESTS_DIR_" variables end with trailing slash.
+  while IFS='=' read -r name value ; do
+    if [[ $name == RUNTESTS_DIR_* ]]; then
+      if [[ $value != */ ]]; then
+        export "$name=$value/"
+      fi
+    fi
+  done < <(env)
+else
+  # Default files when runTests.env is missing, using TYPO3 core configuration:
+  RUNTESTS_DIR_ROOT="${RUNTESTS_DIR_ROOT:=../../}"
+  RUNTESTS_DIR_BUILDER="${RUNTESTS_DIR_BUILDER:=Build/Scripts/}"
+  RUNTESTS_DIR_BUILD="${RUNTESTS_DIR_BUILD:=Build}"
+  RUNTESTS_DIR_VENDOR="${RUNTESTS_DIR_VENDOR:=Build/composer/vendor/}"
+  RUNTESTS_DIR_BIN="${RUNTESTS_DIR_BIN:=bin/}"
+  RUNTESTS_DIR_TESTTEMP="${RUNTESTS_DIR_TESTTEMP:=typo3temp/var/tests/}"
+  RUNTESTS_DIR_CACHE="${RUNTESTS_DIR_TESTTEMP:=.cache/}"
+
+  RUNTESTS_DIRS_CACHE="$RUNTESTS_DIR_CACHE $RUNTESTS_DIR_TESTTEMP"
+  RUNTESTS_DIRS_PROJECT="${RUNTESTS_DIRS_PROJECT:=typo3/}"
+  RUNTESTS_DIRS_PROJECT_BUILD="${RUNTESTS_DIRS_PROJECT_BUILD:=typo3/sysext}"
+
+  RUNTESTS_CLEANUP_BUILD="${RUNTESTS_CLEANUP_BUILD:=\
+                                    Build/JavaScript
+                                    Build/node_modules}"
+  RUNTESTS_CLEANUP_CACHE="${RUNTESTS_CLEANUP_CACHE:=\
+                                    .cache
+                                    Build/.cache
+                                    Build/composer/.cache/
+                                    .php-cs-fixer.cache}"
+  RUNTESTS_CLEANUP_COMPOSER="${RUNTESTS_CLEANUP_COMPOSER:=\
+                                    Build/composer/composer.json \
+                                    Build/composer/composer.lock \
+                                    Build/composer/public/index.php \
+                                    Build/composer/public/typo3 \
+                                    Build/composer/public/typo3conf/ext \
+                                    Build/composer/var/ \
+                                    Build/composer/vendor/}"
+  RUNTESTS_CLEANUP_TESTS="${RUNTESTS_CLEANUP_TESTS:=\
+                                    Build/phpunit/FunctionalTests-Job-*.xml \
+                                    typo3/sysext/core/Tests/AcceptanceTests-Job-* \
+                                    typo3/sysext/core/Tests/Acceptance/Support/_generated \
+                                    typo3temp/var/tests/}"
+  RUNTESTS_CLEANUP_DOCS="${RUNTESTS_CLEANUP_DOCS:=typo3/sysext/*/Documentation-GENERATED-temp}"
+
+  RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL="${RUNTESTS_PHPSTAN_CONFIG_FILE_LOCAL:=Build/phpstan/phpstan.local.neon}"
+  RUNTESTS_PHPSTAN_CONFIG_FILE_CI="${RUNTESTS_PHPSTAN_CONFIG_FILE_CI:=Build/phpstan/phpstan.ci.neon}"
+  RUNTESTS_PHPSTAN_BASELINE_FILE="${RUNTESTS_PHPSTAN_BASELINE_FILE:=Build/phpstan/phpstan-baseline.neon}"
+  RUNTESTS_PHPUNIT_FILE_UNITTEST="${RUNTESTS_PHPUNIT_FILE_UNITTEST:=Build/phpunit/UnitTests.xml}"
+  RUNTESTS_PHPUNIT_FILE_UNITTEST_DEPRECATED="${RUNTESTS_PHPUNIT_FILE_UNITTEST_DEPRECATED:=Build/phpunit/UnitTestsDeprecated.xml}"
+  RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST="${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST:=Build/phpunit/FunctionalTests.xml}"
+  RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED="${RUNTESTS_PHPUNIT_FILE_FUNCTIONALTEST_DEPRECATED:=Build/phpunit/FunctionalTestsDeprecated.xml}"
+  RUNTESTS_DIR_PHPUNIT_FUNCTIONAL="${RUNTESTS_DIR_PHPUNIT_FUNCTIONAL:=Build/phpunit/}"
+  RUNTESTS_CODECEPTION_CONFIG_FILE="${RUNTESTS_CODECEPTION_CONFIG_FILE:=typo3/sysext/core/Tests/codeception.yml}"
+  RUNTESTS_PHPCSFIXER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_CONFIG_FILE:=Build/php-cs-fixer/config.php}"
+  RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE="${RUNTESTS_PHPCSFIXER_HEADER_CONFIG_FILE:=Build/php-cs-fixer/header-comment.php}"
+  RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE="${RUNTESTS_INTEGRITYCHECKER_CONFIG_FILE:=Build/Scripts/phpIntegrityChecker.php}"
+
+  RUNTESTS_COMMAND_BUILD_CSS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt css"
+  RUNTESTS_COMMAND_BUILD_JS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt scripts"
+  RUNTESTS_COMMAND_BUILD_CLEAN="find '${RUNTESTS_DIRS_PROJECT_BUILD}' -name '*.js' -not -path '*/Fixtures/*' -exec rm '{}' + && cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt build; cd ..; git add *; git status; git status | grep -q \"nothing to commit, working tree clean\""
+  RUNTESTS_COMMAND_BUILD_LINT="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt exec:lintspaces"
+  RUNTESTS_COMMAND_BUILD_LINT_STYLE="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt stylelint"
+  RUNTESTS_COMMAND_BUILD_LINT_TS="cd Build; npm ci || exit 1; node_modules/grunt/bin/grunt eslint"
+  RUNTESTS_COMMAND_UNIT_JS="cd Build; npm ci || exit 1; CHROME_SANDBOX=false BROWSERS=chrome npm run test"
+fi
+
 CORE_ROOT="${PWD}"
 
 # Default variables
